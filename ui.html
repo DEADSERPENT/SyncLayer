@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Real-Time Content Sync</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      font-size: 11px;
+      color: #333;
+      background: #f5f5f5;
+      padding: 12px;
+      overflow: hidden;
+    }
+
+    .container {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 14px;
+      text-align: center;
+    }
+
+    .header h1 {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+
+    .header p {
+      font-size: 10px;
+      opacity: 0.9;
+    }
+
+    .content {
+      padding: 12px;
+      max-height: 540px;
+      overflow-y: auto;
+    }
+
+    .section {
+      margin-bottom: 14px;
+    }
+
+    .section-title {
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #1a1a1a;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .badge {
+      display: inline-block;
+      background: #e0e7ff;
+      color: #4338ca;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 10px;
+      font-weight: 500;
+    }
+
+    .badge.connected {
+      background: #d1fae5;
+      color: #065f46;
+    }
+
+    .badge.disconnected {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .input-group {
+      margin-bottom: 10px;
+    }
+
+    label {
+      display: block;
+      font-size: 10px;
+      font-weight: 500;
+      margin-bottom: 4px;
+      color: #555;
+    }
+
+    input[type="text"],
+    input[type="url"],
+    input[type="password"],
+    select,
+    textarea {
+      width: 100%;
+      padding: 7px 10px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      font-size: 11px;
+      font-family: inherit;
+      transition: border-color 0.2s;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 50px;
+      font-family: 'Monaco', 'Courier New', monospace;
+    }
+
+    button {
+      width: 100%;
+      padding: 8px 12px;
+      border: none;
+      border-radius: 5px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-bottom: 6px;
+    }
+
+    button.primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    button.primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    button.secondary {
+      background: #f3f4f6;
+      color: #374151;
+    }
+
+    button.secondary:hover {
+      background: #e5e7eb;
+    }
+
+    button.success {
+      background: #10b981;
+      color: white;
+    }
+
+    button.success:hover {
+      background: #059669;
+    }
+
+    button.danger {
+      background: #ef4444;
+      color: white;
+    }
+
+    button.danger:hover {
+      background: #dc2626;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    .btn-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      margin-bottom: 6px;
+    }
+
+    .status-box {
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 5px;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+
+    .status-box p {
+      font-size: 10px;
+      color: #6b7280;
+      margin-bottom: 3px;
+    }
+
+    .status-box strong {
+      color: #1f2937;
+    }
+
+    .mapping-item {
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 5px;
+      padding: 8px;
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .mapping-item-info {
+      flex: 1;
+    }
+
+    .mapping-item-info p {
+      font-size: 10px;
+      margin-bottom: 2px;
+    }
+
+    .mapping-item-info .layer-name {
+      font-weight: 600;
+      color: #1f2937;
+    }
+
+    .mapping-item-info .field-path {
+      color: #6b7280;
+      font-family: 'Monaco', 'Courier New', monospace;
+    }
+
+    .mapping-item button {
+      width: auto;
+      padding: 5px 10px;
+      margin-bottom: 0;
+      font-size: 9px;
+    }
+
+    .alert {
+      padding: 10px;
+      border-radius: 5px;
+      margin-bottom: 10px;
+      font-size: 10px;
+    }
+
+    .alert.info {
+      background: #dbeafe;
+      color: #1e40af;
+      border: 1px solid #93c5fd;
+    }
+
+    .alert.success {
+      background: #d1fae5;
+      color: #065f46;
+      border: 1px solid #6ee7b7;
+    }
+
+    .alert.error {
+      background: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #fca5a5;
+    }
+
+    .alert.warning {
+      background: #fef3c7;
+      color: #92400e;
+      border: 1px solid #fcd34d;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 2px;
+      margin-bottom: 12px;
+      border-bottom: 2px solid #e5e7eb;
+    }
+
+    .tab {
+      padding: 8px 12px;
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 500;
+      color: #6b7280;
+      transition: all 0.2s;
+    }
+
+    .tab:hover {
+      color: #374151;
+      transform: none;
+    }
+
+    .tab.active {
+      color: #667eea;
+      border-bottom-color: #667eea;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .json-preview {
+      background: #1e293b;
+      color: #e2e8f0;
+      padding: 10px;
+      border-radius: 5px;
+      font-family: 'Monaco', 'Courier New', monospace;
+      font-size: 9px;
+      max-height: 150px;
+      overflow: auto;
+      margin-bottom: 10px;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      margin-right: 8px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .footer {
+      padding: 8px 12px;
+      background: #f9fafb;
+      border-top: 1px solid #e5e7eb;
+      font-size: 9px;
+      color: #6b7280;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Real-Time Content Sync</h1>
+      <p>Connect live data to your Figma designs</p>
+    </div>
+
+    <div class="content">
+      <div class="tabs">
+        <button class="tab active" data-tab="connect">Connect</button>
+        <button class="tab" data-tab="sync">Sync</button>
+        <button class="tab" data-tab="mapping">Mapping</button>
+        <button class="tab" data-tab="settings">Settings</button>
+      </div>
+
+      <!-- Connect Tab -->
+      <div id="connect-tab" class="tab-content active">
+        <div class="section">
+          <div class="section-title">
+            Connection Status
+            <span id="connection-badge" class="badge disconnected">Disconnected</span>
+          </div>
+
+          <div id="connection-info" class="status-box hidden">
+            <p><strong>Source:</strong> <span id="connected-source">-</span></p>
+            <p><strong>Type:</strong> <span id="connected-type">-</span></p>
+            <p><strong>Last Sync:</strong> <span id="last-sync">Never</span></p>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Data Source</div>
+
+          <div class="input-group">
+            <label for="source-type">Source Type</label>
+            <select id="source-type">
+              <option value="rest">REST API</option>
+              <option value="graphql">GraphQL</option>
+              <option value="json">JSON URL</option>
+              <option value="googlesheets">Google Sheets</option>
+              <option value="notion">Notion</option>
+              <option value="airtable">Airtable</option>
+            </select>
+          </div>
+
+          <div class="input-group">
+            <label for="source-url">API URL / Endpoint</label>
+            <input type="url" id="source-url" placeholder="https://api.example.com/data">
+          </div>
+
+          <div class="input-group">
+            <label for="auth-type">Authentication</label>
+            <select id="auth-type">
+              <option value="none">None</option>
+              <option value="bearer">Bearer Token</option>
+              <option value="apikey">API Key</option>
+              <option value="basic">Basic Auth</option>
+            </select>
+          </div>
+
+          <div id="auth-fields" class="hidden">
+            <div class="input-group">
+              <label for="auth-value">Token / API Key</label>
+              <input type="password" id="auth-value" placeholder="Enter your token">
+            </div>
+          </div>
+
+          <div class="input-group">
+            <label for="data-path">Data Path (optional)</label>
+            <input type="text" id="data-path" placeholder="e.g., data.items or data[0]">
+            <p style="font-size: 10px; color: #6b7280; margin-top: 4px;">
+              Leave empty if data is at root level
+            </p>
+          </div>
+
+          <div class="btn-group">
+            <button class="primary" id="test-connection">Test Connection</button>
+            <button class="success" id="save-connection">Save & Connect</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sync Tab -->
+      <div id="sync-tab" class="tab-content">
+        <div id="sync-not-connected" class="alert warning">
+          Please connect to a data source first in the Connect tab.
+        </div>
+
+        <div id="sync-connected" class="hidden">
+          <div class="section">
+            <div class="section-title">Quick Actions</div>
+
+            <button class="primary" id="sync-now">
+              Sync Now
+            </button>
+
+            <button class="secondary" id="preview-data">
+              Preview Data
+            </button>
+          </div>
+
+          <div id="data-preview" class="section hidden">
+            <div class="section-title">Data Preview</div>
+            <div class="json-preview" id="json-preview"></div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">Auto Sync</div>
+
+            <div class="input-group">
+              <label for="auto-sync">
+                <input type="checkbox" id="auto-sync" style="width: auto; margin-right: 6px;">
+                Enable Auto Sync
+              </label>
+              <p style="font-size: 10px; color: #6b7280; margin-top: 4px;">
+                Automatically refresh data every 15 minutes
+              </p>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">Environment</div>
+
+            <div class="input-group">
+              <select id="environment">
+                <option value="production">Production</option>
+                <option value="staging">Staging</option>
+                <option value="development">Development</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mapping Tab -->
+      <div id="mapping-tab" class="tab-content">
+        <div id="mapping-not-connected" class="alert warning">
+          Please connect to a data source and sync data first.
+        </div>
+
+        <div id="mapping-connected" class="hidden">
+          <div class="section">
+            <div class="section-title">Create Mapping</div>
+
+            <div class="alert info">
+              1. Select a text layer in Figma<br>
+              2. Enter the data field path below<br>
+              3. Click "Map Selected Layer"
+            </div>
+
+            <div class="input-group">
+              <label for="field-path">Data Field Path</label>
+              <input type="text" id="field-path" placeholder="e.g., title or items[0].name">
+            </div>
+
+            <button class="primary" id="map-layer">
+              Map Selected Layer
+            </button>
+          </div>
+
+          <div class="section">
+            <div class="section-title">Active Mappings</div>
+
+            <div id="mappings-list">
+              <p style="font-size: 11px; color: #6b7280; text-align: center; padding: 20px;">
+                No mappings yet. Create your first mapping above.
+              </p>
+            </div>
+          </div>
+
+          <button class="danger" id="clear-mappings">
+            Clear All Mappings
+          </button>
+        </div>
+      </div>
+
+      <!-- Settings Tab -->
+      <div id="settings-tab" class="tab-content">
+        <div class="section">
+          <div class="section-title">Localization</div>
+
+          <div class="input-group">
+            <label for="language">Language</label>
+            <select id="language">
+              <option value="en">English</option>
+              <option value="es">Spanish</option>
+              <option value="fr">French</option>
+              <option value="de">German</option>
+              <option value="hi">Hindi</option>
+              <option value="zh">Chinese</option>
+              <option value="ja">Japanese</option>
+              <option value="ar">Arabic</option>
+            </select>
+          </div>
+
+          <button class="secondary" id="apply-language">
+            Apply Language to Mappings
+          </button>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Advanced Options</div>
+
+          <div class="input-group">
+            <label>
+              <input type="checkbox" id="preserve-formatting" checked style="width: auto; margin-right: 6px;">
+              Preserve Text Formatting
+            </label>
+          </div>
+
+          <div class="input-group">
+            <label>
+              <input type="checkbox" id="auto-resize" checked style="width: auto; margin-right: 6px;">
+              Auto-resize Text Boxes
+            </label>
+          </div>
+
+          <div class="input-group">
+            <label>
+              <input type="checkbox" id="warn-overflow" checked style="width: auto; margin-right: 6px;">
+              Warn on Text Overflow
+            </label>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Plugin Data</div>
+
+          <button class="secondary" id="export-config">
+            Export Configuration
+          </button>
+
+          <button class="danger" id="reset-plugin">
+            Reset Plugin
+          </button>
+        </div>
+      </div>
+
+      <div id="status-message" class="hidden"></div>
+    </div>
+
+    <div class="footer">
+      DEVELOPED & DESIGNED BY © DEADSERPENT 2025
+    </div>
+  </div>
+
+  <script>
+    // Security: XSS Prevention
+    function escapeHTML(str) {
+      if (!str) return '';
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    function sanitizeInput(input, maxLength = 500) {
+      if (typeof input !== 'string') return '';
+      return input.trim().substring(0, maxLength);
+    }
+
+    // Tab switching
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        const tabName = tab.dataset.tab;
+
+        // Update tabs
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+
+        // Update content
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        document.getElementById(tabName + '-tab').classList.add('active');
+      });
+    });
+
+    // Auth type change
+    document.getElementById('auth-type').addEventListener('change', (e) => {
+      const authFields = document.getElementById('auth-fields');
+      if (e.target.value !== 'none') {
+        authFields.classList.remove('hidden');
+      } else {
+        authFields.classList.add('hidden');
+      }
+    });
+
+    // Show status message
+    function showStatus(message, type = 'info') {
+      const statusEl = document.getElementById('status-message');
+      statusEl.className = 'alert ' + type;
+      statusEl.textContent = message;
+      statusEl.classList.remove('hidden');
+      setTimeout(() => statusEl.classList.add('hidden'), 4000);
+    }
+
+    // Test connection
+    document.getElementById('test-connection').addEventListener('click', () => {
+      const url = sanitizeInput(document.getElementById('source-url').value, 2048);
+      const authType = document.getElementById('auth-type').value;
+      const authValue = sanitizeInput(document.getElementById('auth-value').value, 1024);
+      const dataPath = sanitizeInput(document.getElementById('data-path').value, 500);
+
+      if (!url) {
+        showStatus('Please enter a URL', 'error');
+        return;
+      }
+
+      // Basic URL validation
+      try {
+        new URL(url);
+      } catch (e) {
+        showStatus('Invalid URL format', 'error');
+        return;
+      }
+
+      parent.postMessage({
+        pluginMessage: {
+          type: 'test-connection',
+          url,
+          authType,
+          authValue,
+          dataPath
+        }
+      }, '*');
+    });
+
+    // Save connection
+    document.getElementById('save-connection').addEventListener('click', () => {
+      const sourceType = document.getElementById('source-type').value;
+      const url = sanitizeInput(document.getElementById('source-url').value, 2048);
+      const authType = document.getElementById('auth-type').value;
+      const authValue = sanitizeInput(document.getElementById('auth-value').value, 1024);
+      const dataPath = sanitizeInput(document.getElementById('data-path').value, 500);
+
+      if (!url) {
+        showStatus('Please enter a URL', 'error');
+        return;
+      }
+
+      // Basic URL validation
+      try {
+        new URL(url);
+      } catch (e) {
+        showStatus('Invalid URL format', 'error');
+        return;
+      }
+
+      parent.postMessage({
+        pluginMessage: {
+          type: 'save-connection',
+          config: {
+            sourceType,
+            url,
+            authType,
+            authValue,
+            dataPath
+          }
+        }
+      }, '*');
+    });
+
+    // Sync now
+    document.getElementById('sync-now').addEventListener('click', () => {
+      parent.postMessage({ pluginMessage: { type: 'sync-now' } }, '*');
+    });
+
+    // Preview data
+    document.getElementById('preview-data').addEventListener('click', () => {
+      parent.postMessage({ pluginMessage: { type: 'preview-data' } }, '*');
+    });
+
+    // Map layer
+    document.getElementById('map-layer').addEventListener('click', () => {
+      const fieldPath = sanitizeInput(document.getElementById('field-path').value, 500);
+
+      if (!fieldPath) {
+        showStatus('Please enter a field path', 'error');
+        return;
+      }
+
+      // Validate field path format (alphanumeric, dots, brackets only)
+      if (!/^[a-zA-Z0-9._\[\]]+$/.test(fieldPath)) {
+        showStatus('Invalid field path. Use only letters, numbers, dots, and brackets.', 'error');
+        return;
+      }
+
+      parent.postMessage({
+        pluginMessage: {
+          type: 'map-layer',
+          fieldPath
+        }
+      }, '*');
+    });
+
+    // Clear mappings
+    document.getElementById('clear-mappings').addEventListener('click', () => {
+      if (confirm('Are you sure you want to clear all mappings?')) {
+        parent.postMessage({ pluginMessage: { type: 'clear-mappings' } }, '*');
+      }
+    });
+
+    // Apply language
+    document.getElementById('apply-language').addEventListener('click', () => {
+      const language = document.getElementById('language').value;
+      parent.postMessage({
+        pluginMessage: {
+          type: 'apply-language',
+          language
+        }
+      }, '*');
+    });
+
+    // Export config
+    document.getElementById('export-config').addEventListener('click', () => {
+      parent.postMessage({ pluginMessage: { type: 'export-config' } }, '*');
+    });
+
+    // Reset plugin
+    document.getElementById('reset-plugin').addEventListener('click', () => {
+      if (confirm('This will delete all connections and mappings. Are you sure?')) {
+        parent.postMessage({ pluginMessage: { type: 'reset-plugin' } }, '*');
+      }
+    });
+
+    // Auto sync
+    document.getElementById('auto-sync').addEventListener('change', (e) => {
+      parent.postMessage({
+        pluginMessage: {
+          type: 'toggle-auto-sync',
+          enabled: e.target.checked
+        }
+      }, '*');
+    });
+
+    // Listen for messages from plugin
+    window.onmessage = (event) => {
+      const msg = event.data.pluginMessage;
+      if (!msg) return;
+
+      switch(msg.type) {
+        case 'connection-status':
+          updateConnectionStatus(msg.connected, msg.config);
+          break;
+        case 'test-result':
+          showStatus(msg.message, msg.success ? 'success' : 'error');
+          break;
+        case 'sync-complete':
+          showStatus('Data synced successfully!', 'success');
+          document.getElementById('last-sync').textContent = new Date().toLocaleTimeString();
+          break;
+        case 'data-preview':
+          showDataPreview(msg.data);
+          break;
+        case 'mapping-created':
+          showStatus('Mapping created successfully!', 'success');
+          addMappingToList(msg.mapping);
+          break;
+        case 'mappings-list':
+          renderMappingsList(msg.mappings);
+          break;
+        case 'error':
+          showStatus(msg.message, 'error');
+          break;
+        case 'success':
+          showStatus(msg.message, 'success');
+          break;
+      }
+    };
+
+    function updateConnectionStatus(connected, config) {
+      const badge = document.getElementById('connection-badge');
+      const info = document.getElementById('connection-info');
+      const syncNotConnected = document.getElementById('sync-not-connected');
+      const syncConnected = document.getElementById('sync-connected');
+      const mappingNotConnected = document.getElementById('mapping-not-connected');
+      const mappingConnected = document.getElementById('mapping-connected');
+
+      if (connected) {
+        badge.textContent = 'Connected';
+        badge.className = 'badge connected';
+        info.classList.remove('hidden');
+        // Escape HTML to prevent XSS
+        document.getElementById('connected-source').textContent = escapeHTML(config.url);
+        document.getElementById('connected-type').textContent = escapeHTML(config.sourceType).toUpperCase();
+
+        syncNotConnected.classList.add('hidden');
+        syncConnected.classList.remove('hidden');
+        mappingNotConnected.classList.add('hidden');
+        mappingConnected.classList.remove('hidden');
+      } else {
+        badge.textContent = 'Disconnected';
+        badge.className = 'badge disconnected';
+        info.classList.add('hidden');
+
+        syncNotConnected.classList.remove('hidden');
+        syncConnected.classList.add('hidden');
+        mappingNotConnected.classList.remove('hidden');
+        mappingConnected.classList.add('hidden');
+      }
+    }
+
+    function showDataPreview(data) {
+      const preview = document.getElementById('data-preview');
+      const jsonPreview = document.getElementById('json-preview');
+
+      jsonPreview.textContent = JSON.stringify(data, null, 2);
+      preview.classList.remove('hidden');
+    }
+
+    function addMappingToList(mapping) {
+      const list = document.getElementById('mappings-list');
+
+      // Clear placeholder if exists
+      if (list.querySelector('p')) {
+        list.innerHTML = '';
+      }
+
+      const item = document.createElement('div');
+      item.className = 'mapping-item';
+
+      // Create elements safely without innerHTML to prevent XSS
+      const infoDiv = document.createElement('div');
+      infoDiv.className = 'mapping-item-info';
+
+      const layerName = document.createElement('p');
+      layerName.className = 'layer-name';
+      layerName.textContent = mapping.layerName;
+
+      const fieldPath = document.createElement('p');
+      fieldPath.className = 'field-path';
+      fieldPath.textContent = mapping.fieldPath;
+
+      const button = document.createElement('button');
+      button.className = 'danger';
+      button.textContent = 'Remove';
+      button.onclick = () => removeMapping(mapping.layerId);
+
+      infoDiv.appendChild(layerName);
+      infoDiv.appendChild(fieldPath);
+      item.appendChild(infoDiv);
+      item.appendChild(button);
+      list.appendChild(item);
+    }
+
+    function renderMappingsList(mappings) {
+      const list = document.getElementById('mappings-list');
+
+      if (mappings.length === 0) {
+        list.innerHTML = '<p style="font-size: 11px; color: #6b7280; text-align: center; padding: 20px;">No mappings yet. Create your first mapping above.</p>';
+        return;
+      }
+
+      list.innerHTML = '';
+      mappings.forEach(mapping => addMappingToList(mapping));
+    }
+
+    function removeMapping(layerId) {
+      parent.postMessage({
+        pluginMessage: {
+          type: 'remove-mapping',
+          layerId
+        }
+      }, '*');
+    }
+
+    // Request initial state
+    parent.postMessage({ pluginMessage: { type: 'init' } }, '*');
+  </script>
+</body>
+</html>

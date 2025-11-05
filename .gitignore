@@ -1,0 +1,108 @@
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.npm
+.yarn-integrity
+
+# Build Output
+out/
+dist/
+build/
+code.js
+
+# Environment Variables (NEVER commit these)
+.env
+.env.local
+.env.*.local
+*.env
+.envrc
+
+# API Keys & Secrets (NEVER commit these)
+secrets/
+*.key
+*.pem
+*.p12
+*.pfx
+config/secrets.json
+credentials.json
+auth.json
+
+# IDE & Editor Files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Operating System Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# Logs
+logs/
+*.log
+*.log.*
+npm-debug.log*
+yarn-debug.log*
+
+# Testing
+coverage/
+.nyc_output/
+*.lcov
+
+# TypeScript Cache
+*.tsbuildinfo
+
+# Temporary Files
+tmp/
+temp/
+*.tmp
+*.temp
+.cache/
+
+# Backup Files
+*.bak
+*.backup
+*.old
+
+# Package Manager Lock Files (optional - some prefer to commit these)
+# package-lock.json
+# yarn.lock
+
+# Plugin Development
+*.figma-plugin-dev
+
+# Security - Never commit sensitive data
+*.cert
+*.crt
+*.cer
+*.der
+token.txt
+api-keys.txt
+passwords.txt
+
+# Local Configuration (user-specific)
+.local/
+local.config.js
+
+# macOS
+.AppleDouble
+.LSOverride
+
+# Windows
+[Dd]esktop.ini
+$RECYCLE.BIN/
+
+# Linux
+.directory

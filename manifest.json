@@ -1,0 +1,17 @@
+{
+  "name": "Real-Time Content Sync (RTCS)",
+  "id": "1567887614987292858",
+  "api": "1.0.0",
+  "main": "code.js",
+  "capabilities": [],
+  "enableProposedApi": false,
+  "documentAccess": "dynamic-page",
+  "editorType": [
+    "figma"
+  ],
+  "ui": "ui.html",
+  "networkAccess": {
+    "allowedDomains": ["*"],
+    "reasoning": "This plugin needs to connect to any API, CMS, or data source that users want to sync content from. Users may connect to their own APIs, public APIs like JSONPlaceholder, or third-party services like Notion, Airtable, and Google Sheets. Restricting domains would prevent the core functionality of syncing content from diverse sources."
+  }
+}
