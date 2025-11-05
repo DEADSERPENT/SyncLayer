@@ -472,8 +472,27 @@ function previewData() {
 // Map layer
 async function mapLayer(fieldPath: string) {
   try {
+    // Check if we have data
+    if (!pluginData.cachedData) {
+      figma.ui.postMessage({
+        type: 'error',
+        message: 'No data available. Please connect and sync data first.'
+      });
+      return;
+    }
+
     // Validate field path
     const validatedPath = validateFieldPath(fieldPath);
+
+    // Check if field path exists in data
+    const testValue = getNestedValue(pluginData.cachedData, validatedPath);
+    if (testValue === undefined || testValue === null) {
+      figma.ui.postMessage({
+        type: 'error',
+        message: `No value found for path "${validatedPath}". Check your field path or use Preview Data to see structure.`
+      });
+      return;
+    }
 
     // Check mapping limit
     if (pluginData.mappings.length >= SECURITY_CONFIG.MAX_MAPPINGS) {
@@ -499,7 +518,7 @@ async function mapLayer(fieldPath: string) {
     if (node.type !== 'TEXT') {
       figma.ui.postMessage({
         type: 'error',
-        message: 'Selected layer must be a text layer'
+        message: 'Selected layer must be a text layer. Current selection is: ' + node.type
       });
       return;
     }
@@ -522,12 +541,24 @@ async function mapLayer(fieldPath: string) {
     await figma.clientStorage.setAsync('rtcs_mappings', JSON.stringify(pluginData.mappings));
 
     // Update the layer with current data
-    await updateLayerFromMapping(mapping);
+    const updateResult = await updateLayerFromMapping(mapping);
 
-    figma.ui.postMessage({
-      type: 'mapping-created',
-      mapping
-    });
+    if (updateResult.success) {
+      figma.ui.postMessage({
+        type: 'mapping-created',
+        mapping
+      });
+
+      figma.ui.postMessage({
+        type: 'success',
+        message: `Mapped "${sanitizedLayerName}" to "${validatedPath}" - Text updated!`
+      });
+    } else {
+      figma.ui.postMessage({
+        type: 'error',
+        message: updateResult.error || 'Failed to update text layer'
+      });
+    }
 
     sendMappingsList();
   } catch (error) {
@@ -539,25 +570,27 @@ async function mapLayer(fieldPath: string) {
 }
 
 // Update layer from mapping
-async function updateLayerFromMapping(mapping: Mapping) {
+async function updateLayerFromMapping(mapping: Mapping): Promise<{success: boolean, error?: string}> {
   if (!pluginData.cachedData) {
-    return;
+    return { success: false, error: 'No cached data available' };
   }
 
   try {
-    const node = figma.getNodeById(mapping.layerId) as TextNode;
+    const node = await figma.getNodeByIdAsync(mapping.layerId) as TextNode;
 
-    if (!node || node.type !== 'TEXT') {
-      console.warn(`Layer ${mapping.layerId} not found or not a text layer`);
-      return;
+    if (!node) {
+      return { success: false, error: `Layer with ID ${mapping.layerId} not found` };
+    }
+
+    if (node.type !== 'TEXT') {
+      return { success: false, error: `Layer "${mapping.layerName}" is not a text layer (type: ${node.type})` };
     }
 
     // Get value from data
     const value = getNestedValue(pluginData.cachedData, mapping.fieldPath);
 
     if (value === undefined || value === null) {
-      console.warn(`No value found for path: ${mapping.fieldPath}`);
-      return;
+      return { success: false, error: `No value found for path: ${mapping.fieldPath}` };
     }
 
     // Convert value to string and sanitize
@@ -573,12 +606,20 @@ async function updateLayerFromMapping(mapping: Mapping) {
     textValue = textValue.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
 
     // Load font before updating text
-    await figma.loadFontAsync(node.fontName as FontName);
+    try {
+      await figma.loadFontAsync(node.fontName as FontName);
+    } catch (fontError) {
+      return { success: false, error: `Failed to load font: ${fontError}` };
+    }
 
     // Update text
     node.characters = textValue;
+
+    return { success: true };
   } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
     console.error(`Error updating layer ${mapping.layerName}:`, error);
+    return { success: false, error: errorMsg };
   }
 }
 
@@ -647,12 +688,18 @@ async function applyLanguage(language: string) {
   pluginData.language = language;
   await figma.clientStorage.setAsync('rtcs_language', language);
 
-  // In a real implementation, this would fetch data from a different endpoint
-  // or use a different data path based on the language
-  figma.ui.postMessage({
-    type: 'success',
-    message: `Language changed to ${language}. Sync data to apply changes.`
-  });
+  // If we have a connection, offer to re-sync with language parameter
+  if (pluginData.config && pluginData.cachedData) {
+    figma.ui.postMessage({
+      type: 'success',
+      message: `Language set to ${language}. To use localized content, add language parameter to your API URL (e.g., ?lang=${language}) and click Sync Now.`
+    });
+  } else {
+    figma.ui.postMessage({
+      type: 'success',
+      message: `Language preference saved: ${language}`
+    });
+  }
 }
 
 // Export configuration

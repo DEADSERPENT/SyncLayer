@@ -1,5 +1,5 @@
 {
-  "name": "Real-Time Content Sync (RTCS)",
+  "name": "SyncLayer - Content Sync & CMS Plugin",
   "id": "1567887614987292858",
   "api": "1.0.0",
   "main": "code.js",
